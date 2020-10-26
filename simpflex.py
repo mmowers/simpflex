@@ -16,9 +16,9 @@ crf = 0.1
 #import data
 df_tech_cost = pd.read_csv('inputs/tech_cost.csv', dtype={'class': 'str'})
 df_time_map = pd.read_csv('inputs/time_map.csv')
-df_load = pd.read_csv('inputs/load.csv')
-df_wind = pd.read_csv('inputs/wind.csv')
-df_upv = pd.read_csv('inputs/upv.csv')
+df_load = pd.read_csv('inputs/load.csv') #First column is 'hour'. Other columns are region names
+df_wind = pd.read_csv('inputs/wind.csv') #First column is 'hour'. Other columns are formatted like [tech]_[class]_[region]
+df_upv = pd.read_csv('inputs/upv.csv') #Same as above
 
 #Apply filters
 if years_filter is not None:
