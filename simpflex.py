@@ -102,13 +102,14 @@ for (t,c,r,y) in tcry:
 
 #Add load and reserve margin requirements
 for (r,y,h) in ryh:
+    tc = [(t,c) for (t,c,r2,y2) in tcry if (r2,y2) == (r,y)]
     #TODO: maybe remove GEN for res_techs and use CAP*cf instead?
     #TODO: Add transmission inflows and outflows
     #Load Constraint: GEN >= load
-    prob += pulp.lpSum([GEN[(t,c,r,y,h)] for (t,c,r,y,h) in tcryh]) >= load[(r,h)]
+    prob += pulp.lpSum([GEN[(t,c,r,y,h)] for (t,c) in tc]) >= load[(r,h)]
     #Reserve margin constraint:
-    prob += pulp.lpSum([CAP[(t,c,r,y)] for (t,c,r,y) in tcry if t not in res_techs]) +\
-            pulp.lpSum([cf_res[(t,c,r,h)] * CAP[(t,c,r,y)] for (t,c,r,y) in tcry if t in res_techs]) >=\
+    prob += pulp.lpSum([CAP[(t,c,r,y)] for (t,c) in tc if t not in res_techs]) +\
+            pulp.lpSum([cf_res[(t,c,r,h)] * CAP[(t,c,r,y)] for (t,c) in tc if t in res_techs]) >=\
             1.15 * load[(r,h)]
 
 #TODO:
