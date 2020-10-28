@@ -90,23 +90,26 @@ prob = pulp.LpProblem("elec", pulp.LpMinimize)
 #Create capacity and generation variables and linking constraint
 CAP = {} #TODO: CAP needs to have build year and current year.
 GEN = {}
-for (tech, clss, reg, year) in tcry:
-    CAP[(tech, clss, reg, year)] = pulp.LpVariable(name=tech+'|'+ clss +'|'+reg+'|'+str(year), lowBound=0, upBound=None)
-    for time in times:
-        GEN[(tech, clss, reg, year, time)] = pulp.LpVariable(name=tech+'|'+ clss +'|'+reg+'|'+str(year)+'|'+str(time), lowBound=0, upBound=None)
-        #CONSTRAINT: GEN < CAP
-        if tech in res_techs:
-            prob += GEN[(tech, clss, reg, year, time)] == cf_res[(tech, clss, reg, time)] * CAP[(tech, clss, reg, year)]
+for (t,c,r,y) in tcry:
+    CAP[(t,c,r,y)] = pulp.LpVariable(name=t+'|'+ c +'|'+r+'|'+str(y), lowBound=0, upBound=None)
+    for h in times:
+        GEN[(t,c,r,y,h)] = pulp.LpVariable(name=t+'|'+ c +'|'+r+'|'+str(y)+'|'+str(h), lowBound=0, upBound=None)
+        #generation max constraint: GEN < CAP
+        if t in res_techs:
+            prob += GEN[(t,c,r,y,h)] == cf_res[(t,c,r,h)] * CAP[(t,c,r,y)]
         else:
-            prob += GEN[(tech, clss, reg, year, time)] <= CAP[(tech, clss, reg, year)]
+            prob += GEN[(t,c,r,y,h)] <= CAP[(t,c,r,y)]
 
 #Add load and reserve margin requirements
-for (reg, year, time) in ryh:
+for (r,y,h) in ryh:
     #TODO: maybe remove GEN for res_techs and use CAP*cf instead?
     #TODO: Add transmission inflows and outflows
-    prob += pulp.lpSum([GEN[(tech, clss, reg, year, time)] for (tech, clss, reg, year, time) in tcryh]) >= load[(reg, time)]
-    prob += pulp.lpSum([CAP[(tech, clss, reg, year)] for (tech, clss, reg, year) in tcry if tech not in res_techs]) +\
-        pulp.lpSum([cf_res[(tech, clss, reg, time)] * CAP[(tech, clss, reg, year)] for (tech, clss, reg, year) in tcry if tech in res_techs]) >= 1.15 * load[(reg, time)]
+    #Load Constraint: GEN >= load
+    prob += pulp.lpSum([GEN[(t,c,r,y,h)] for (t,c,r,y,h) in tcryh]) >= load[(r,h)]
+    #Reserve margin constraint:
+    prob += pulp.lpSum([CAP[(t,c,r,y)] for (t,c,r,y) in tcry if t not in res_techs]) +\
+            pulp.lpSum([cf_res[(t,c,r,h)] * CAP[(t,c,r,y)] for (t,c,r,y) in tcry if t in res_techs]) >=\
+            1.15 * load[(r,h)]
 
 #TODO:
 #Resource constraints
@@ -114,8 +117,8 @@ for (reg, year, time) in ryh:
 #Relate capacity from previous years to this year
 
 #Objective
-prob += pulp.lpSum([(vom[(tech, clss, year)] + fuelcost[(tech, clss, year)])*hours[time]/crf * GEN[(tech, clss, reg, year, time)] for (tech, clss, reg, year, time) in tcryh]) +\
-        pulp.lpSum([(capcost[(tech, clss, year)] + fom[(tech, clss, year)]/crf) * CAP[(tech, clss, reg, year)] for (tech, clss, reg, year) in tcry])
+prob += pulp.lpSum([(vom[(t,c,y)] + fuelcost[(t,c,y)])*hours[h]/crf * GEN[(t,c,r,y,h)] for (t,c,r,y,h) in tcryh]) +\
+        pulp.lpSum([(capcost[(t,c,y)] + fom[(t,c,y)]/crf) * CAP[(t,c,r,y)] for (t,c,r,y) in tcry])
 
 #Solve
 status = prob.solve()
@@ -123,5 +126,7 @@ status = prob.solve()
 #Show chosen variables:
 gen_chosen = {(t,c,r,y,h): pulp.value(GEN[(t,c,r,y,h)]) for (t,c,r,y,h) in tcryh if pulp.value(GEN[(t,c,r,y,h)]) != 0}
 cap_chosen = {(t,c,r,y): pulp.value(CAP[(t,c,r,y)]) for (t,c,r,y) in tcry if pulp.value(CAP[(t,c,r,y)]) != 0}
+
+#TODO: Sequential/Intertemporal modes
 
 b()
